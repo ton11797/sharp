@@ -610,7 +610,7 @@ class PipelineWorker : public Napi::AsyncWorker {
 
       // Recomb
       if (baton->recombMatrix != NULL) {
-        image = sharp::Recomb(image, baton->recombMatrix);
+        image = sharp::Recomb(image, baton->recombMatrix, baton->recombMatrixSize);
       }
 
       // Modulate
@@ -1613,12 +1613,20 @@ Napi::Value pipeline(const Napi::CallbackInfo& info) {
     }
   }
   if (options.Has("recombMatrix")) {
-    baton->recombMatrix = std::unique_ptr<double[]>(new double[9]);
+    baton->recombMatrixSize = sharp::AttrAsInt32(options, "recombMatrixSize");
+    if(baton->recombMatrixSize == 3){
+      baton->recombMatrix = std::unique_ptr<double[]>(new double[9]);
+    }else{
+      baton->recombMatrix = std::unique_ptr<double[]>(new double[16]);
+    }
     Napi::Array recombMatrix = options.Get("recombMatrix").As<Napi::Array>();
-    for (unsigned int i = 0; i < 9; i++) {
-       baton->recombMatrix[i] = sharp::AttrAsDouble(recombMatrix, i);
+    unsigned int matrixElements = baton->recombMatrixSize * baton->recombMatrixSize;
+    for (unsigned int i = 0; i < matrixElements; i++) {
+      baton->recombMatrix[i] = sharp::AttrAsDouble(recombMatrix, i);
     }
   }
+  
+
   baton->colourspacePipeline = sharp::AttrAsEnum<VipsInterpretation>(
     options, "colourspacePipeline", VIPS_TYPE_INTERPRETATION);
   if (baton->colourspacePipeline == VIPS_INTERPRETATION_ERROR) {
